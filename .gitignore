@@ -1,0 +1,9 @@
+# .gitignore 文件内容
+/*
+.idea/
+!src/
+!docs/
+!tests/
+!data/
+!requirements.txt
+demo.py
