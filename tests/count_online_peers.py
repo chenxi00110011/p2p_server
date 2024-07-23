@@ -10,6 +10,7 @@ import re
 from datetime import datetime
 import schedule
 import time
+from src import json_util
 
 
 def exception_handler(func):
@@ -221,6 +222,23 @@ if __name__ == '__main__':
 
         # 总连接次数
         all_count = actual_failure_count + success_num
+
+        # 序列化数据
+        data = dict()
+        data["总连接次数"] = all_count
+        data["成功次数"] = success_num
+        data["失败次数"] = faile_num
+        data["失败百分比"] = failure_percentage
+        data["实际成功次数"] = success_num
+        data["实际失败次数"] = actual_failure_count
+        data["实际失败百分比"] = actual_failure_percentage
+        data["P2P连接总数"] = p2p_count
+        data["RLY连接总数"] = rly_count
+        data["连接成功数据"] = success_data
+        data["连接失败数据"] = faile_data
+
+        # data 序列化
+        json_util.serialize_and_append_to_json_array(data, file_path='./log')
 
         print("当前解析文件：{}".format(temp_file_path))
         print("总连接次数：{},成功次数：{}, 失败次数:{}(失败百分比：{:.0%}) "
