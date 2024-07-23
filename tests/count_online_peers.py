@@ -8,9 +8,8 @@ Date:
 import os
 import re
 from datetime import datetime
-import schedule
 import time
-from src import json_util
+import json_util
 
 
 def exception_handler(func):
@@ -137,127 +136,136 @@ def format_date_from_list(date_list):
     dir_path = '{}/{}/{}.txt'.format(formatted_date, formatted_hour, formatted_minute)
     return dir_path
 
+def test_parse_and_save_data():
+    # 使用函数获取当前时间,并生成文件相对路径
+    current_time = current_time_as_list()
+    file_path = format_date_from_list(current_time)
+    print(file_path)
+
+    # base目录，合并生成绝对路径
+    base_path = r'/root/EasyDebug/PPC_Log/'
+    temp_file_path = ''
+    # print(temp_file_path)
+    flag_enter = False
+    if os.name == 'posix' and not flag_enter:
+        # print("当前系统是类Unix系统，包括Linux和Mac OS")
+        # temp_file_path = input("请输入文件的绝对路径(回车则自动运行)：")
+        # flag_enter = True
+        # if len(temp_file_path) < 5:
+        #     temp_file_path = base_path + file_path
+        temp_file_path = base_path + file_path
+    elif os.name == 'nt':
+        # print("当前系统是Windows")
+        temp_file_path = r'E:\06.txt'
+    else:
+        print("当前系统未知")
+
+    # 成功次数和失败次数
+    all_count = 0
+    success_num = 0
+    faile_num = 0
+    p2p_count = 0
+    rly_count = 0
+    p2p_connection_count = 0
+    forward_count = 0
+    success_data = {}
+    faile_data = {}
+    forwarding_server_ip = ['124.70.48.140',
+                            '116.205.246.62',
+                            '124.71.28.144',
+                            '110.41.148.162',
+                            '139.159.162.81',
+                            '139.9.42.68',
+                            '129.150.62.146.',
+                            '158.178.226.162',
+                            '122.8.149.214',
+                            '158.101.162.182',
+                            '172.234.26.124',
+                            '159.138.140.4',
+                            '49.0.251.50']
+
+    # 筛选出符合条件的数据
+    for line in read_large_file(temp_file_path):
+        if 'Connect' in line and '0x27' not in line:
+            if 'failed' in line:
+                faile_data = record_reconnect_faile_data(faile_data, line)
+                faile_num += 1
+            elif 'P2P' in line or "RLY" in line:
+                if "P2P" in line:
+                    p2p_count += 1
+                elif "RLY" in line:
+                    rly_count += 1
+                success_data = record_reconnect_success_data(success_data, line, forwarding_server_ip)
+                success_num += 1
+
+    # 筛选-6的0x00、0x01参数 和 0x27
+    count_ret = 0
+    # print(faile_data)
+    for ret, hex_frequency_map in faile_data.items():
+        for hex, num in hex_frequency_map.items():
+            if ret == 'ret=-6' and (hex == '0x01' or hex == '0x00'):
+                count_ret += faile_data[ret][hex]
+            elif hex == '0x27':
+                count_ret += faile_data[ret][hex]
+
+    # 实际连接失败次数
+    actual_failure_count = faile_num - count_ret
+
+    # 失败百分比
+    failure_percentage = faile_num / (success_num + faile_num)
+
+    # 实际失败百分比（剔除了-6的0x00、0x01参数 和 0x27）
+    actual_failure_percentage = actual_failure_count / (success_num + actual_failure_count)
+
+    # 总连接次数
+    all_count = actual_failure_count + success_num
+
+    # 序列化数据
+    data = dict()
+    data["时间戳"] = int(time.time())
+    data["总连接次数"] = all_count
+    data["成功次数"] = success_num
+    data["失败次数"] = faile_num
+    data["失败百分比"] = failure_percentage
+    data["实际成功次数"] = success_num
+    data["实际失败次数"] = actual_failure_count
+    data["实际失败百分比"] = actual_failure_percentage
+    data["P2P连接总数"] = p2p_count
+    data["RLY连接总数"] = rly_count
+    data["连接成功数据"] = success_data
+    data["连接失败数据"] = faile_data
+
+    # 获取当前日期和时间
+    now = datetime.now()
+
+    # 提取日期部分
+    current_date = now.date()
+
+    # data 序列化
+    json_util.serialize_and_append_to_json_array(data, file_path='/root/tests/{}.log'.format(current_date))
+
+    print("当前解析文件：{}".format(temp_file_path))
+    print("总连接次数：{},成功次数：{}, 失败次数:{}(失败百分比：{:.0%}) "
+          "\n实际成功次数：{}, 实际失败次数:{}(实际失败百分比:{:.0%})"
+          "\nP2P连接总数：{},RLY连接总数：{}"
+          .format(all_count, success_num, faile_num, failure_percentage, success_num, actual_failure_count
+                  , actual_failure_percentage, p2p_count, rly_count))
+    print("连接成功")
+    print(success_data)
+    print("连接失败")
+    print(faile_data)
+    print("*" * 100)
+
 
 if __name__ == '__main__':
     # @exception_handler
-    def job():
-        # 使用函数获取当前时间,并生成文件相对路径
-        current_time = current_time_as_list()
-        file_path = format_date_from_list(current_time)
-        print(file_path)
-
-        # base目录，合并生成绝对路径
-        base_path = r'/root/EasyDebug/PPC_Log/'
-        temp_file_path = ''
-        # print(temp_file_path)
-        flag_enter = False
-        if os.name == 'posix' and not flag_enter:
-            # print("当前系统是类Unix系统，包括Linux和Mac OS")
-            temp_file_path = input("请输入文件的绝对路径(回车则自动运行)：")
-            flag_enter = True
-            if len(temp_file_path) < 5:
-                temp_file_path = base_path + file_path
-        elif os.name == 'nt':
-            # print("当前系统是Windows")
-            temp_file_path = r'F:\easydebug测试文件\test\06.txt'
-        else:
-            print("当前系统未知")
-
-        # 成功次数和失败次数
-        all_count = 0
-        success_num = 0
-        faile_num = 0
-        p2p_count = 0
-        rly_count = 0
-        p2p_connection_count = 0
-        forward_count = 0
-        success_data = {}
-        faile_data = {}
-        forwarding_server_ip = ['124.70.48.140',
-                                '116.205.246.62',
-                                '124.71.28.144',
-                                '110.41.148.162',
-                                '139.159.162.81',
-                                '139.9.42.68',
-                                '129.150.62.146.',
-                                '158.178.226.162',
-                                '122.8.149.214',
-                                '158.101.162.182',
-                                '172.234.26.124',
-                                '159.138.140.4',
-                                '49.0.251.50']
-
-        # 筛选出符合条件的数据
-        for line in read_large_file(temp_file_path):
-            if 'Connect' in line and '0x27' not in line:
-                if 'failed' in line:
-                    faile_data = record_reconnect_faile_data(faile_data, line)
-                    faile_num += 1
-                elif 'P2P' in line or "RLY" in line:
-                    if "P2P" in line:
-                        p2p_count += 1
-                    elif "RLY" in line:
-                        rly_count += 1
-                    success_data = record_reconnect_success_data(success_data, line, forwarding_server_ip)
-                    success_num += 1
-
-        # 筛选-6的0x00、0x01参数 和 0x27
-        count_ret = 0
-        # print(faile_data)
-        for ret, hex_frequency_map in faile_data.items():
-            for hex, num in hex_frequency_map.items():
-                if ret == 'ret=-6' and (hex == '0x01' or hex == '0x00'):
-                    count_ret += faile_data[ret][hex]
-                elif hex == '0x27':
-                    count_ret += faile_data[ret][hex]
-
-        # 实际连接失败次数
-        actual_failure_count = faile_num - count_ret
-
-        # 失败百分比
-        failure_percentage = faile_num / (success_num + faile_num)
-
-        # 实际失败百分比（剔除了-6的0x00、0x01参数 和 0x27）
-        actual_failure_percentage = actual_failure_count / (success_num + actual_failure_count)
-
-        # 总连接次数
-        all_count = actual_failure_count + success_num
-
-        # 序列化数据
-        data = dict()
-        data["总连接次数"] = all_count
-        data["成功次数"] = success_num
-        data["失败次数"] = faile_num
-        data["失败百分比"] = failure_percentage
-        data["实际成功次数"] = success_num
-        data["实际失败次数"] = actual_failure_count
-        data["实际失败百分比"] = actual_failure_percentage
-        data["P2P连接总数"] = p2p_count
-        data["RLY连接总数"] = rly_count
-        data["连接成功数据"] = success_data
-        data["连接失败数据"] = faile_data
-
-        # data 序列化
-        json_util.serialize_and_append_to_json_array(data, file_path='./log')
-
-        print("当前解析文件：{}".format(temp_file_path))
-        print("总连接次数：{},成功次数：{}, 失败次数:{}(失败百分比：{:.0%}) "
-              "\n实际成功次数：{}, 实际失败次数:{}(实际失败百分比:{:.0%})"
-              "\nP2P连接总数：{},RLY连接总数：{}"
-              .format(all_count, success_num, faile_num, failure_percentage, success_num, actual_failure_count
-                      , actual_failure_percentage, p2p_count, rly_count))
-        print("连接成功")
-        print(success_data)
-        print("连接失败")
-        print(faile_data)
-        print("*" * 100)
 
 
     # 使用cron风格的时间设置，每30分钟执行一次，* 表示任意值，因此"*/30"表示每30分钟
-    job()
-    schedule.every(1).minutes.do(job)
-    print("Task scheduler started...")
-
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    test_parse_and_save_data()
+    # schedule.every(1).minutes.do(job)
+    # print("Task scheduler started...")
+    #
+    # while True:
+    #     schedule.run_pending()
+    #     time.sleep(1)
