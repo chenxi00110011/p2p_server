@@ -57,7 +57,7 @@ def list_remote_directory_as_dict(host, port, username, password, remote_directo
     return file_info_dict
 
 
-def download_file_from_sftp(host, port, username, password, remote_directory, remote_filename, local_path):
+def download_file_from_sftp(host, port, username, password, remote_directory, remote_filename, local_path, local_file_name=None):
     """
     Connects to an SFTP server, lists the contents of a remote directory,
     downloads a specified file, and returns a dictionary with file metadata.
@@ -91,7 +91,9 @@ def download_file_from_sftp(host, port, username, password, remote_directory, re
                 remote_file_path = f"{remote_directory}/{remote_filename}"
 
                 # Download the file
-                local_file_path = f"{local_path}/{remote_filename}"
+                if not local_file_name:
+                    local_file_name = remote_filename
+                local_file_path = f"{local_path}/{local_file_name}"
                 sftp_client.get(remote_file_path, local_file_path)
                 print(f"File '{remote_filename}' downloaded to '{local_file_path}'.")
 
@@ -112,5 +114,69 @@ def download_file_from_sftp(host, port, username, password, remote_directory, re
         return None
 
 
+def execute_remote_command(host, port, username, password, command):
+    """
+    使用paramiko执行远程SSH命令。
+
+    :param host: 主机名或IP地址
+    :param port: SSH端口号，默认为22
+    :param username: 登录用户名
+    :param password: 登录密码
+    :param command: 要执行的命令
+    :return: 命令的标准输出和标准错误
+    """
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        ssh.connect(host, port=port, username=username, password=password)
+        stdin, stdout, stderr = ssh.exec_command(command)
+        output = stdout.read().decode()
+        error = stderr.read().decode()
+        return output, error
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+        return None, str(e)
+    finally:
+        ssh.close()
+
+
+def upload_file(host, port, username, password, local_file_path, remote_file_path):
+    """
+    使用paramiko上传本地文件到远程服务器。
+
+    :param host: 主机名或IP地址
+    :param port: SSH端口号，默认为22
+    :param username: 登录用户名
+    :param password: 登录密码
+    :param local_file_path: 本地文件的完整路径
+    :param remote_file_path: 远程服务器上文件的目标路径
+    """
+    transport = paramiko.Transport((host, port))
+    transport.connect(username=username, password=password)
+
+    sftp = paramiko.SFTPClient.from_transport(transport)
+
+    try:
+        # 上传文件
+        sftp.put(local_file_path, remote_file_path)
+        print(f"File uploaded successfully to {remote_file_path}")
+    except Exception as e:
+        print(f"An error occurred while uploading the file: {str(e)}")
+    finally:
+        # 关闭SFTP和Transport连接
+        if sftp:
+            sftp.close()
+        if transport:
+            transport.close()
+
+
 if __name__ == '__main__':
-    pass
+    host = '139.159.218.144'
+    port = 22
+    username = 'root'
+    password = 'ZOWELL@123456'
+    local_file_path = r'C:\Users\Administrator\P2pServerTest\p2p_server\tests\config.py'
+    remote_file_path = '/root/tests/config.py'
+
+    upload_file(host, port, username, password, local_file_path, remote_file_path)

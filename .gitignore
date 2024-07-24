@@ -1,9 +1,15 @@
 # .gitignore 文件内容
 /*
 .idea/
+.pycache/
+# 忽略所有 __pycache__ 目录
+**/__pycache__/
+
+# 允许下列文件夹
 !src/
 !docs/
 !tests/
-!data/
 !requirements.txt
-demo.py
+
+# 不允许denmo
+**/demo.py
