@@ -1,3 +1,4 @@
-import os
+from data_visualizer import main
+from config import *
 
-os.system("pytest -vs -m cron")
+
