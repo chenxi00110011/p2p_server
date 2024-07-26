@@ -21,9 +21,9 @@ def read_and_deserialize_json(file_path: str) -> list:
             data = json.load(file)
         return data
     except FileNotFoundError:
-        print("文件未找到: {}".format(file_path))
+        print(f"文件未找到: {file_path}")
     except json.JSONDecodeError as e:
-        print("JSON解码错误: {}".format(e))
+        print(f"JSON解码错误: {e}")
 
 
 def serialize_and_append_to_json_array(data: dict, file_path: str):
@@ -50,7 +50,7 @@ def serialize_and_append_to_json_array(data: dict, file_path: str):
             with open(file_path, 'w', encoding='utf-8') as file:
                 file.write("[\n")
         except IOError as e:
-            print("Error creating file: {}".format(e))
+            print(f"Error creating file: {e}")
             return False
     else:
         # 文件存在，则反序列化该文件
@@ -67,7 +67,7 @@ def serialize_and_append_to_json_array(data: dict, file_path: str):
 
         return True
     except Exception as e:
-        print("Error serializing data to JSON or appending to file: {}".format(e))
+        print(f"Error serializing data to JSON or appending to file: {e}")
         return False
 
 

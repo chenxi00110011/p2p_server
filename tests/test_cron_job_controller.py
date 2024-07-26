@@ -1,5 +1,5 @@
 import pytest
-from src import sftp_utils
+import sftp_utils
 from config import *
 
 
