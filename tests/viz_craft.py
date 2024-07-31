@@ -21,7 +21,7 @@ def plot_line_chart_from_df(df: DataFrame, file_path: str):
     # 找出 'value' 列中的最大值
     max_value = df['value'].max()
     max_value = math.ceil(max_value * 10) / 10
-    ax.set_ylim(bottom=0, top=max_value)
+    ax.set_ylim(bottom=0, top=1)
 
 
     # 添加标题和标签

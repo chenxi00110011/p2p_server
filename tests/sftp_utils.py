@@ -78,40 +78,21 @@ def download_file_from_sftp(host, port, username, password, remote_directory, re
         # Create an SSH client
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        # Connect to the SFTP server
+        ssh.connect(hostname=host, port=port, username=username, password=password)
 
-        try:
-            # Connect to the SFTP server
-            ssh.connect(hostname=host, port=port, username=username, password=password)
+        # Initialize SFTP session
+        sftp_client = ssh.open_sftp()
+        # Construct full remote path
+        remote_file_path = f"{remote_directory}/{remote_filename}"
+        # Download the file
+        if not local_file_name:
+            local_file_name = remote_filename
+        local_file_path = f"{local_path}/{local_file_name}"
+        sftp_client.get(remote_file_path, local_file_path)
+        print(f"File '{remote_filename}' downloaded to '{local_file_path}'.")
+        ssh.close()
 
-            # Initialize SFTP session
-            sftp_client = ssh.open_sftp()
-
-            try:
-                # Construct full remote path
-                remote_file_path = f"{remote_directory}/{remote_filename}"
-
-                # Download the file
-                if not local_file_name:
-                    local_file_name = remote_filename
-                local_file_path = f"{local_path}/{local_file_name}"
-                sftp_client.get(remote_file_path, local_file_path)
-                print(f"File '{remote_filename}' downloaded to '{local_file_path}'.")
-
-            finally:
-                # Close the SFTP session
-                sftp_client.close()
-
-        except Exception as e:
-            print(f"An error occurred during download: {e}")
-            return None
-
-        finally:
-            # Ensure the SSH connection is closed
-            ssh.close()
-
-    else:
-        print(f"File '{remote_filename}' not found in the remote directory.")
-        return None
 
 
 def execute_remote_command(host, port, username, password, command):
@@ -127,18 +108,13 @@ def execute_remote_command(host, port, username, password, command):
     """
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(host, port=port, username=username, password=password)
+    stdin, stdout, stderr = ssh.exec_command(command)
+    output = stdout.read().decode()
+    error = stderr.read().decode()
+    ssh.close()
+    return output, error
 
-    try:
-        ssh.connect(host, port=port, username=username, password=password)
-        stdin, stdout, stderr = ssh.exec_command(command)
-        output = stdout.read().decode()
-        error = stderr.read().decode()
-        return output, error
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
-        return None, str(e)
-    finally:
-        ssh.close()
 
 
 def upload_file(host, port, username, password, local_file_path, remote_file_path):

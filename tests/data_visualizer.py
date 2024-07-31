@@ -4,10 +4,10 @@ import time
 from datetime import datetime
 from pandas import DataFrame
 from config import *
-from src import sftp_utils
+import sftp_utils
 import easygui
 from json_util import read_and_deserialize_json
-from src import viz_craft
+import viz_craft
 
 
 def align_dict_values_lengths(input_dict):
@@ -20,6 +20,9 @@ def align_dict_values_lengths(input_dict):
     返回:
     dict: 一个新字典，其中所有列表的长度已经被对齐。
     """
+    # 如果字典为空，则直接返回
+    if len(input_dict) == 0:
+        return input_dict
     # 查找最长的列表长度
     max_length = max(len(lst) for lst in input_dict.values())
 
@@ -120,42 +123,81 @@ def select_single_option(message, title, choices):
 def convert_to_format(data: list, percentage=True):
     # 对齐数据
     # 创建一个空字典用于存储结果
-    result = {'失败百分比': [_[2] for _ in data],
-              '总连接次数': [_[3] for _ in data],
-              '失败次数': [_[4] for _ in data], }
+    excel_dict = {}
+    result = {'失败百分比': [],
+              '总连接次数': [],
+              '失败次数': [], }
     count = 0
     for ret_tuple in data:
+        # 使用字典推导式为每个值列表添加0
+        excel_dict = {key: value + [0] for key, value in excel_dict.items()}
+
+        # 失败百分比、总连接次数、失败次数 初始化
+        failure_percentage, all_count, faile_num = 0, 0, 0
+
         # 遍历外部字典
         for ret_key, inner_dict in ret_tuple[0].items():
             # 遍历内部字典
             for code_key, value in inner_dict.items():
-                if ret_key == 'ret=-6' and (code_key == '0x01' or code_key == '0x00'):
-                    break
+                if ret_key == 'ret=-6':
+                    continue
                 elif code_key == '0x27':
-                    break
+                    continue
                 # 创建新的键格式
                 new_key = f"{ret_key}({code_key})"
 
-                # 转换为百分比
-                if percentage:
-                    value = (value / ret_tuple[1])
+                # 失败次数累加
+                faile_num += value
+
+                # # 转换为百分比
+                # if percentage:
+                #     value = (value / ret_tuple[1])
 
                 # 如果键不存在，则添加；否则，追加值到现有列表中
-                if new_key not in result.keys():
-                    result[new_key] = [0 for _ in range(count)] + [value]
+                if new_key not in excel_dict.keys():
+                    excel_dict[new_key] = [0 for _ in range(count)] + [value]
                 else:
-                    result[new_key].append(value)
-            # # 添加失败百分比
-            # if "失败百分比" not in result.keys():
-            #     result["失败百分比"] = [ret_tuple[2]]
-            # else:
-            #     result["失败百分比"].append(ret_tuple[2])
+                    excel_dict[new_key][-1] = value
+
+        # 总连接次数 = 失败次数 + 成功次数
+        all_count = faile_num + data[count][1]
+
+        # 失败百分比 = 失败次数/总连接次数
+        if all_count:
+            failure_percentage = faile_num / all_count
+        else:
+            failure_percentage = 0
+
+        # result更新 总连接次数、失败次数、失败百分比
+        result['总连接次数'].append(all_count)
+        result['失败次数'].append(faile_num)
+        result['失败百分比'].append(failure_percentage)
 
         count += 1
+
+    # 换算为百分比
+    if percentage:
+        for ret, ret_data in excel_dict.items():
+            for index, _ in enumerate(ret_data):
+                if result['总连接次数'][index]:
+                    excel_dict[ret][index] = _ / result['总连接次数'][index]
+                else:
+                    excel_dict[ret][index] = 0
+    result.update(excel_dict)
     return result
 
 
 def main(selected_choice_server, selected_choice_file):
+    # 删除tmpe文件
+    # 检查文件是否存在
+    file_path = local_path + local_file_name
+    if os.path.exists(file_path):
+        # 删除文件
+        os.remove(file_path)
+        print(f"File {file_path} has been deleted.")
+    else:
+        print(f"The file {file_path} does not exist.")
+
     # 下载JSON文件
     sftp_utils.download_file_from_sftp(
         host=selected_choice_server,
@@ -177,15 +219,17 @@ def main(selected_choice_server, selected_choice_file):
     time_list = [datetime.fromtimestamp(_) for _ in time_list]
 
     # 解析出失败数据
-    fail_data = [(d.get('连接失败数据', '默认值'), d.get('总连接次数', '默认值'), d.get('实际失败百分比', '默认值'),
-                  d.get('总连接次数', '默认值'), d.get('失败次数', '默认值')) for d in data]
+    fail_data = [(d.get('连接失败数据', '默认值'), d.get('实际成功次数', '默认值')) for d in data]
     # time_list = [_ for _ in range(len(fail_data))]
 
-    # 用于存储到excel中
+    # 用于存储到excel中的数据
     convert_data_to_ecxel = convert_to_format(fail_data, percentage=False)
+    # print(convert_data_to_ecxel)
+    # for k, v in convert_data_to_ecxel.items():
+    #     print(k, v)
 
-    # convert_data数据
-    convert_data = convert_to_format(fail_data)
+    # 用于生成折线图的数据
+    convert_data = convert_to_format(fail_data, percentage=True)
 
     # 添加时间
     convert_data_to_ecxel['时间'] = time_list
@@ -193,17 +237,19 @@ def main(selected_choice_server, selected_choice_file):
     # 对齐数据
     convert_data_to_ecxel = align_dict_values_lengths(convert_data_to_ecxel)
 
-    # 移除总连接次数和失败次数
+    # 折线图的数据 移除总连接次数和失败次数
     del convert_data['总连接次数']
     del convert_data['失败次数']
 
+    # 将数据调整为折线图可以识别的数据
     convert_data = pad_dictionary_lists(time_list, convert_data)
-    # dt = datetime.fromtimestamp(time.time())
-    # date_str = '{:02d}-{:02d}-{:02d}'.format(dt.year, dt.month, dt.day)
-    date_str = selected_choice_file.replace('.log', '')
 
+    # 去掉文件名的后缀，然后生成目录
+    date_str = selected_choice_file.replace('.log', '')
     save_dataframe_to_excel(convert_data_to_ecxel,
                             '../data/{}/{}/{}.xlsx'.format(date_str, selected_choice_server, date_str))
+
+    # 生成折线图
     viz_craft.plot_line_chart_from_dict(convert_data, '../data/{}/{}/'.format(date_str, selected_choice_server))
 
 

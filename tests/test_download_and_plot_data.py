@@ -6,8 +6,9 @@ from config import *
 import pytest
 
 
+@pytest.mark.flaky(reruns=3, reruns_delay=10)
 @pytest.mark.parametrize("host", hosts)
-def test_download_and_plot_data(host:str):
+def test_download_and_plot_data(host: str):
     # 生成前一天的日期
     dt = datetime.fromtimestamp(time.time() - 86400)
     date_str = '{:02d}-{:02d}-{:02d}'.format(dt.year, dt.month, dt.day)
