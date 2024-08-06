@@ -141,7 +141,7 @@ def convert_to_format(data: list, percentage=True):
             for code_key, value in inner_dict.items():
                 if ret_key == 'ret=-6' or ret_key == 'ret=-19':
                     continue
-                elif code_key == '0x27':
+                elif code_key == '0x27' or code_key == '0x00':
                     continue
                 # 创建新的键格式
                 new_key = f"{ret_key}({code_key})"
