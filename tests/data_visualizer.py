@@ -139,7 +139,7 @@ def convert_to_format(data: list, percentage=True):
         for ret_key, inner_dict in ret_tuple[0].items():
             # 遍历内部字典
             for code_key, value in inner_dict.items():
-                if ret_key == 'ret=-6':
+                if ret_key == 'ret=-6' or ret_key == 'ret=-19':
                     continue
                 elif code_key == '0x27':
                     continue
