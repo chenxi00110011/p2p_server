@@ -6,7 +6,7 @@ import schedule
 if __name__ == '__main__':
 
     def job():
-        os.system('pytest  -vs test_download_and_plot_data.py')
+        os.system('pytest  -vs test_monitor_server_status.py')
 
 
     # 每天凌晨1点运行 job 函数

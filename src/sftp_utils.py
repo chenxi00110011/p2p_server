@@ -57,7 +57,16 @@ def list_remote_directory_as_dict(host, port, username, password, remote_directo
     return file_info_dict
 
 
-def download_file_from_sftp(host, port, username, password, remote_directory, remote_filename, local_path, local_file_name=None):
+def download_file_from_sftp(
+        host: str,
+        port: int,
+        username: str,
+        password: str,
+        remote_directory: str,
+        remote_filename: str,
+        local_path: str,
+        local_file_name=None
+):
     """
     Connects to an SFTP server, lists the contents of a remote directory,
     downloads a specified file, and returns a dictionary with file metadata.

@@ -13,3 +13,13 @@ password = 'ZOWELL@123456'
 remote_directory = '/root/tests/'
 local_path = '../data/'
 local_file_name = 'tmpe.log'
+
+server_info = [
+    {
+        'host': '139.159.218.144',
+        'username': 'root',
+        'password': 'ZOWELL@123456',
+        'type': 'P2P',
+        'prot': 22
+    }
+]
