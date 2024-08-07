@@ -6,7 +6,8 @@ import schedule
 if __name__ == '__main__':
 
     def job():
-        os.system('pytest  -vs test_monitor_server_status.py')
+        os.system('pytest -vs test_monitor_server_status.py -n auto --alluredir ./report/result')
+        os.system('allure generate ./report/result/ -o report/html --clean')
 
 
     # 每天凌晨1点运行 job 函数
